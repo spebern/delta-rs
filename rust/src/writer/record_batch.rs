@@ -82,7 +82,7 @@ impl RecordBatchWriter {
         // Initialize writer properties for the underlying arrow writer
         let writer_properties = WriterProperties::builder()
             // NOTE: Consider extracting config for writer properties and setting more than just compression
-            .set_compression(Compression::SNAPPY)
+            .set_compression(Compression::ZSTD)
             .build();
 
         Ok(Self {
@@ -105,7 +105,7 @@ impl RecordBatchWriter {
         // Initialize writer properties for the underlying arrow writer
         let writer_properties = WriterProperties::builder()
             // NOTE: Consider extracting config for writer properties and setting more than just compression
-            .set_compression(Compression::SNAPPY)
+            .set_compression(Compression::ZSTD)
             .build();
 
         Ok(Self {
