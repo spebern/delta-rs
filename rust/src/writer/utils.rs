@@ -16,7 +16,7 @@ use arrow::datatypes::{
     TimestampMillisecondType, TimestampNanosecondType, TimestampSecondType, UInt16Type, UInt32Type,
     UInt64Type, UInt8Type,
 };
-use arrow::json::reader::{Decoder, DecoderOptions};
+use arrow::json::RawReaderBuilder;
 use arrow::record_batch::*;
 use object_store::path::Path;
 use parking_lot::RwLock;
@@ -109,11 +109,12 @@ pub fn record_batch_from_message(
     arrow_schema: Arc<ArrowSchema>,
     message_buffer: &[Value],
 ) -> Result<RecordBatch, DeltaTableError> {
-    let mut value_iter = message_buffer.iter().map(|j| Ok(j.to_owned()));
-    let options = DecoderOptions::new().with_batch_size(message_buffer.len());
-    let decoder = Decoder::new(arrow_schema, options);
+    let mut decoder = RawReaderBuilder::new(arrow_schema)
+        .with_batch_size(message_buffer.len())
+        .build_decoder()?;
+    decoder.serialize(message_buffer)?;
     decoder
-        .next_batch(&mut value_iter)?
+        .flush()?
         .ok_or_else(|| DeltaWriterError::EmptyRecordBatch.into())
 }
 

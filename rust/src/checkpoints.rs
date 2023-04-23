@@ -2,7 +2,7 @@
 
 use arrow::datatypes::Schema as ArrowSchema;
 use arrow::error::ArrowError;
-use arrow::json::reader::{Decoder, DecoderOptions};
+use arrow::json::RawReaderBuilder;
 use chrono::{DateTime, Datelike, Duration, Utc};
 use futures::StreamExt;
 use lazy_static::lazy_static;
@@ -332,7 +332,7 @@ fn parquet_bytes_from_state(state: &DeltaTableState) -> Result<bytes::Bytes, Che
     }
 
     // protocol
-    let mut jsons = std::iter::once(action::Action::protocol(action::Protocol {
+    let jsons = std::iter::once(action::Action::protocol(action::Protocol {
         min_reader_version: state.min_reader_version(),
         min_writer_version: state.min_writer_version(),
     }))
@@ -382,9 +382,13 @@ fn parquet_bytes_from_state(state: &DeltaTableState) -> Result<bytes::Bytes, Che
     // Write the Checkpoint parquet file.
     let mut bytes = vec![];
     let mut writer = ArrowWriter::try_new(&mut bytes, arrow_schema.clone(), None)?;
-    let options = DecoderOptions::new().with_batch_size(CHECKPOINT_RECORD_BATCH_SIZE);
-    let decoder = Decoder::new(arrow_schema, options);
-    while let Some(batch) = decoder.next_batch(&mut jsons)? {
+    let mut decoder = RawReaderBuilder::new(arrow_schema)
+        .with_batch_size(CHECKPOINT_RECORD_BATCH_SIZE)
+        .build_decoder()?;
+    let jsons: Result<Vec<Value>, _> = jsons.collect();
+    dbg!(&jsons);
+    decoder.serialize(&jsons?)?;
+    if let Some(batch) = decoder.flush()? {
         writer.write(&batch)?;
     }
     let _ = writer.close()?;

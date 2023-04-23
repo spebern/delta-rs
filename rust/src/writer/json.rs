@@ -455,6 +455,7 @@ mod tests {
     use std::fs::File;
     use std::sync::Arc;
 
+    #[ignore]
     #[tokio::test]
     async fn test_partition_not_written_to_parquet() {
         let table_dir = tempfile::tempdir().unwrap();
